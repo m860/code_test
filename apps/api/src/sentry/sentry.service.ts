@@ -2,6 +2,7 @@ import {
   captureException,
   captureMessage,
   init,
+  ping,
   resetClient,
 } from '@code-sentry/node';
 import { Injectable, Logger } from '@nestjs/common';
@@ -15,7 +16,7 @@ export class SentryService {
 
   constructor(private readonly config: ConfigService) {}
 
-  initFromConfig(): void {
+  async initFromConfig(): Promise<void> {
     const cs = this.config.get<AppConfig['codeSentry']>('codeSentry');
     if (!cs?.baseUrl || !cs.webhookToken) {
       this.logger.warn(
@@ -30,8 +31,20 @@ export class SentryService {
       environment: cs.environment,
       service: cs.service,
     });
-    this.ready = true;
-    this.logger.log(`Code Sentry ready → ${cs.baseUrl} service=${cs.service}`);
+    try {
+      const result = await ping();
+      this.ready = true;
+      this.logger.log(
+        `Code Sentry ping ok → ${cs.baseUrl} project=${result.name}(${result.projectId}) service=${cs.service}`,
+      );
+    } catch (err) {
+      this.ready = false;
+      resetClient();
+      this.logger.error(
+        `Code Sentry ping failed → ${cs.baseUrl}; reporting disabled`,
+        err instanceof Error ? err.stack : err,
+      );
+    }
   }
 
   isReady(): boolean {

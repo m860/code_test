@@ -17,9 +17,10 @@ pnpm dev
 
 ## 人工怎么测
 
-1. Code Sentry 管理端建应用，把一次性 `webhookToken` 写入 `.env`，重启 API。  
-2. 打开 Web，用「一键预设」或 Boom 按钮触发错误。  
-3. 到 Code Sentry 看是否出现事件（message / stack / tags / request_id）。
+1. Code Sentry 管理端建应用，把接入 Key 写入 `.env` 的 `CODE_SENTRY_WEBHOOK_TOKEN`，重启 API。  
+2. 看 API 日志：出现 `Code Sentry ping ok` 即端到端接入成功；`ping failed` 则检查 URL/Key/哨兵是否在跑。  
+3. 打开 Web，用「一键预设」或 Boom 按钮触发错误。  
+4. 到 Code Sentry 看是否出现事件（message / stack / tags / request_id）。
 
 | 操作 | 预期 |
 |------|------|

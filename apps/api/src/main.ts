@@ -14,7 +14,7 @@ async function bootstrap(): Promise<void> {
   const config = app.get(ConfigService);
   const sentry = app.get(SentryService);
 
-  sentry.initFromConfig();
+  await sentry.initFromConfig();
 
   app.setGlobalPrefix('v1');
   app.enableCors({ origin: true });
