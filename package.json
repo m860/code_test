@@ -1,0 +1,17 @@
+{
+  "name": "code-test",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Demo app (API + Web) integrating Code Sentry @code-sentry/node",
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter @code-test/api --filter @code-test/web run dev",
+    "dev:api": "pnpm --filter @code-test/api dev",
+    "dev:web": "pnpm --filter @code-test/web dev",
+    "build": "pnpm -r --filter @code-test/api --filter @code-test/web run build",
+    "test": "pnpm --filter @code-test/api test && pnpm --filter @code-test/web test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@10.33.4"
+}
