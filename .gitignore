@@ -4,5 +4,6 @@ dist/
 coverage/
 *.log
 .DS_Store
+*.tsbuildinfo
 apps/*/dist
 apps/web/dist
