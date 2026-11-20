@@ -5,12 +5,15 @@ import { config as loadDotenv } from 'dotenv';
 import { resolve } from 'node:path';
 import { AppModule } from './app.module';
 import { SentryExceptionFilter } from './common/filters/sentry-exception.filter';
+import { BufferedLogger } from './sentry/buffered-logger';
 import { SentryService } from './sentry/sentry.service';
 
 loadDotenv({ path: resolve(__dirname, '../../../.env') });
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: new BufferedLogger(),
+  });
   const config = app.get(ConfigService);
   const sentry = app.get(SentryService);
 

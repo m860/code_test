@@ -3,16 +3,24 @@ import {
   captureMessage,
   init,
   ping,
+  registerLogQuery,
   resetClient,
+  type RegisterLogQueryHandle,
 } from '@code-sentry/node';
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { AppConfig } from '../config/configuration';
+import { appLogStore } from './memory-log-store';
 
 @Injectable()
-export class SentryService {
+export class SentryService implements OnModuleDestroy {
   private readonly logger = new Logger(SentryService.name);
   private ready = false;
+  private logQueryHandle: RegisterLogQueryHandle | undefined;
 
   constructor(private readonly config: ConfigService) {}
 
@@ -37,11 +45,43 @@ export class SentryService {
       this.logger.log(
         `Code Sentry ping ok → ${cs.baseUrl} project=${result.name}(${result.projectId}) service=${cs.service}`,
       );
+      await this.registerLogQueryFromConfig(cs);
     } catch (err) {
       this.ready = false;
       resetClient();
       this.logger.error(
         `Code Sentry ping failed → ${cs.baseUrl}; reporting disabled`,
+        err instanceof Error ? err.stack : err,
+      );
+    }
+  }
+
+  private async registerLogQueryFromConfig(
+    cs: AppConfig['codeSentry'],
+  ): Promise<void> {
+    if (!cs.publicBaseUrl) {
+      this.logger.warn(
+        'CODE_SENTRY_PUBLIC_BASE_URL unset; skip log-query registration',
+      );
+      return;
+    }
+    try {
+      this.logQueryHandle = await registerLogQuery({
+        service: cs.service,
+        publicBaseUrl: cs.publicBaseUrl,
+        listenPort: cs.logQueryPort,
+        query: (request) => appLogStore.query(request),
+        meta: { app: 'code-test-api' },
+      });
+      this.logger.log(
+        `Code Sentry log-query registered → ${this.logQueryHandle.callbackUrl} (listen :${this.logQueryHandle.port})`,
+      );
+      appLogStore.append('info', 'log-query registered with Code Sentry', {
+        callbackUrl: this.logQueryHandle.callbackUrl,
+      });
+    } catch (err) {
+      this.logger.error(
+        `Code Sentry log-query register failed → ${cs.publicBaseUrl}`,
         err instanceof Error ? err.stack : err,
       );
     }
@@ -75,5 +115,12 @@ export class SentryService {
   reset(): void {
     this.ready = false;
     resetClient();
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    if (this.logQueryHandle) {
+      await this.logQueryHandle.stop();
+      this.logQueryHandle = undefined;
+    }
   }
 }

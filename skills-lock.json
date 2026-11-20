@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "skills": {
+    "code-sentry-integrate": {
+      "source": "172.16.0.199",
+      "sourceUrl": "http://172.16.0.199:8088",
+      "sourceType": "well-known",
+      "computedHash": "15da574bc0c56de51946b45b651611cffc2322834716b067997e91a3389a4289",
+      "wellKnownDigest": "sha256:3bae33cce50af1354159609f6c183c6b0263ac4f024634c0ec781d8d165e7584"
+    }
+  }
+}
