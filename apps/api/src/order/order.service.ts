@@ -84,6 +84,8 @@ export class OrderService {
       Function('return missingWarehouseCode.length')();
       throw new Error('unreachable');
     }
+    // CHAOS_SKUS.NULL intentionally not wired: former throwChaos('null_deref') caused
+    // TypeError: Cannot read properties of null (reading 'customer').
 
     // qty >= 99 always inventory chaos (deterministic for manual test)
     if (dto.qty >= 99) {
