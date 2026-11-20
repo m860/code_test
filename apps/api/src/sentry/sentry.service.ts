@@ -3,8 +3,10 @@ import {
   captureMessage,
   init,
   ping,
+  registerDataQuery,
   registerLogQuery,
   resetClient,
+  type RegisterDataQueryHandle,
   type RegisterLogQueryHandle,
 } from '@code-sentry/node';
 import {
@@ -13,6 +15,7 @@ import {
   OnModuleDestroy,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ModuleRef } from '@nestjs/core';
 import type { AppConfig } from '../config/configuration';
 import { appLogStore } from './memory-log-store';
 
@@ -21,8 +24,12 @@ export class SentryService implements OnModuleDestroy {
   private readonly logger = new Logger(SentryService.name);
   private ready = false;
   private logQueryHandle: RegisterLogQueryHandle | undefined;
+  private dataQueryHandle: RegisterDataQueryHandle | undefined;
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly moduleRef: ModuleRef,
+  ) {}
 
   async initFromConfig(): Promise<void> {
     const cs = this.config.get<AppConfig['codeSentry']>('codeSentry');
@@ -46,6 +53,7 @@ export class SentryService implements OnModuleDestroy {
         `Code Sentry ping ok → ${cs.baseUrl} project=${result.name}(${result.projectId}) service=${cs.service}`,
       );
       await this.registerLogQueryFromConfig(cs);
+      await this.registerDataQueryFromConfig(cs);
     } catch (err) {
       this.ready = false;
       resetClient();
@@ -87,6 +95,73 @@ export class SentryService implements OnModuleDestroy {
     }
   }
 
+  private async registerDataQueryFromConfig(
+    cs: AppConfig['codeSentry'],
+  ): Promise<void> {
+    if (!cs.dataPublicBaseUrl) {
+      this.logger.warn(
+        'CODE_SENTRY_DATA_PUBLIC_BASE_URL unset; skip data-query registration',
+      );
+      return;
+    }
+    // Dynamic import avoids OrderService ↔ SentryService circular static deps.
+    const { OrderService } = await import('../order/order.service');
+    let orders: InstanceType<typeof OrderService>;
+    try {
+      orders = this.moduleRef.get(OrderService, { strict: false });
+    } catch {
+      this.logger.warn(
+        'OrderService unavailable; skip data-query registration',
+      );
+      return;
+    }
+    try {
+      this.dataQueryHandle = await registerDataQuery({
+        service: cs.service,
+        publicBaseUrl: cs.dataPublicBaseUrl,
+        listenPort: cs.dataQueryPort,
+        meta: { app: 'code-test-api' },
+        queries: [
+          {
+            name: 'order_by_id',
+            description: '按订单号查订单摘要',
+            params: ['orderId'],
+            handler: ({ params }) => {
+              const orderId = String(params.orderId ?? '');
+              const order = orders.getById(orderId);
+              return {
+                query: 'order_by_id',
+                rows: order ? [{ ...order }] : [],
+                truncated: false,
+              };
+            },
+          },
+          {
+            name: 'orders_recent',
+            description: '最近订单列表（只读，无 chaos）',
+            params: [],
+            handler: ({ limit }) => {
+              const rows = orders.listRecent(limit ?? 50).map((o) => ({ ...o }));
+              return {
+                query: 'orders_recent',
+                rows,
+                truncated: false,
+              };
+            },
+          },
+        ],
+      });
+      this.logger.log(
+        `Code Sentry data-query registered → ${this.dataQueryHandle.callbackUrl} (listen :${this.dataQueryHandle.port}) queries=order_by_id,orders_recent`,
+      );
+    } catch (err) {
+      this.logger.error(
+        `Code Sentry data-query register failed → ${cs.dataPublicBaseUrl}`,
+        err instanceof Error ? err.stack : err,
+      );
+    }
+  }
+
   isReady(): boolean {
     return this.ready;
   }
@@ -118,6 +193,10 @@ export class SentryService implements OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
+    if (this.dataQueryHandle) {
+      await this.dataQueryHandle.stop();
+      this.dataQueryHandle = undefined;
+    }
     if (this.logQueryHandle) {
       await this.logQueryHandle.stop();
       this.logQueryHandle = undefined;

@@ -12,6 +12,13 @@ export type AppConfig = {
     publicBaseUrl: string;
     /** Dedicated listen port for SDK log-query HTTP (separate from Nest PORT). */
     logQueryPort: number;
+    /**
+     * Base URL for data-query callback (separate port from log-query).
+     * Must match CODE_SENTRY_DATA_QUERY_PORT.
+     */
+    dataPublicBaseUrl: string;
+    /** Dedicated listen port for SDK data-query HTTP. */
+    dataQueryPort: number;
   };
   demo: {
     /** Probability of random failure on create (0–1). Default 0.35 for manual E2E. */
@@ -27,9 +34,16 @@ export default (): AppConfig => {
     : 0.35;
 
   const logQueryPort = Number(process.env.CODE_SENTRY_LOG_QUERY_PORT ?? 3110);
+  const safeLogPort = Number.isFinite(logQueryPort) ? logQueryPort : 3110;
   const publicBaseUrl =
     process.env.CODE_SENTRY_PUBLIC_BASE_URL?.trim() ||
-    `http://127.0.0.1:${Number.isFinite(logQueryPort) ? logQueryPort : 3110}`;
+    `http://127.0.0.1:${safeLogPort}`;
+
+  const dataQueryPort = Number(process.env.CODE_SENTRY_DATA_QUERY_PORT ?? 3111);
+  const safeDataPort = Number.isFinite(dataQueryPort) ? dataQueryPort : 3111;
+  const dataPublicBaseUrl =
+    process.env.CODE_SENTRY_DATA_PUBLIC_BASE_URL?.trim() ||
+    `http://127.0.0.1:${safeDataPort}`;
 
   return {
     port: Number(process.env.PORT ?? 3100),
@@ -39,7 +53,9 @@ export default (): AppConfig => {
       environment: process.env.CODE_SENTRY_ENVIRONMENT?.trim() || 'test',
       service: process.env.CODE_SENTRY_SERVICE?.trim() || 'code-test-api',
       publicBaseUrl,
-      logQueryPort: Number.isFinite(logQueryPort) ? logQueryPort : 3110,
+      logQueryPort: safeLogPort,
+      dataPublicBaseUrl,
+      dataQueryPort: safeDataPort,
     },
     demo: { flakyRate },
   };

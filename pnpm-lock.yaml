@@ -11,8 +11,8 @@ importers:
   apps/api:
     dependencies:
       '@code-sentry/node':
-        specifier: ^0.4.0
-        version: 0.4.0
+        specifier: ^0.5.0
+        version: 0.5.0
       '@nestjs/common':
         specifier: ^11.0.12
         version: 11.2.8(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -357,8 +357,8 @@ packages:
   '@borewit/text-codec@0.2.3':
     resolution: {integrity: sha512-49CycTz1aAZmvFcwkeFyhud1HUmRIB5Tabf7ALV+VA4Iu85MTfz2cUwzPagMFAdVBvrWdkCxG67I30tUwwpKsw==}
 
-  '@code-sentry/node@0.4.0':
-    resolution: {integrity: sha512-LoA0di7NWt+JON2pGiG7G/FpFPdHgD2cUc6yNBbhQnhts7Kem4YqGaE68B+x8JsBir/n+mAJdUTvuLfNDTAFhA==}
+  '@code-sentry/node@0.5.0':
+    resolution: {integrity: sha512-QIywsY708V2IkZ13U73kSZE3q4yKEqz7QISQ5uArhXpjsO7NOtHwLY700xcqaiiWjaWrA45UH8gNh+q97k3zCQ==}
     engines: {node: '>=20'}
 
   '@colors/colors@1.5.0':
@@ -4013,7 +4013,7 @@ snapshots:
 
   '@borewit/text-codec@0.2.3': {}
 
-  '@code-sentry/node@0.4.0': {}
+  '@code-sentry/node@0.5.0': {}
 
   '@colors/colors@1.5.0':
     optional: true

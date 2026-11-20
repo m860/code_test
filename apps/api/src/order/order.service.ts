@@ -40,6 +40,19 @@ export class OrderService {
     return [...this.orders].reverse();
   }
 
+  /** Stable read for Agent data-query (no chaos). */
+  getById(id: string): Order | undefined {
+    const key = id.trim();
+    if (!key) return undefined;
+    return this.orders.find((o) => o.id === key);
+  }
+
+  /** Stable recent list for Agent data-query (no chaos). */
+  listRecent(limit = 50): Order[] {
+    const n = Math.min(Math.max(limit, 1), 200);
+    return [...this.orders].reverse().slice(0, n);
+  }
+
   async create(dto: CreateOrderDto, requestId?: string): Promise<Order> {
     const sku = dto.sku.trim();
     const upper = sku.toUpperCase();

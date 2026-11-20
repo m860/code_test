@@ -3,8 +3,9 @@ name: code-sentry-integrate
 description: >-
   Integrate a protected app with Code Sentry: obtain webhook Key, install
   @code-sentry/node or call HTTP ingest, ping verification, optional
-  registerLogQuery for on-demand logs. Use when wiring Code Sentry into an
-  application, SDK 接入, 接入 Key, ingest events, or Agent log query registration.
+  registerLogQuery / registerDataQuery for on-demand logs and named data.
+  Use when wiring Code Sentry into an application, SDK 接入, 接入 Key,
+  ingest events, or Agent log/data query registration.
 ---
 
 # Code Sentry 应用接入
@@ -31,7 +32,7 @@ pnpm add @code-sentry/node
 # 或 npm i / yarn add
 ```
 
-含 `registerLogQuery` 时包版本需 ≥ 0.4.0（以实际可装源为准）。
+含 `registerLogQuery` 时包版本需 ≥ 0.4.0；含 `registerDataQuery` 需 ≥ 0.5.0（以实际可装源为准）。
 
 ### 最短上报
 
@@ -96,6 +97,51 @@ const handle = await registerLogQuery({
 - 同 `service` 再次登记会覆盖 callback。
 - 管理面「日志查询」Tab **只读**，不在 UI 配 URL。
 
+### 可选：数据命名查询（`registerDataQuery`）
+
+排障需要对照业务数据时，用**命名查询**（不是任意 SQL）。登记方式与日志同源（Key、心跳、按 `service`）。
+
+**选型建议（优先）：** 命名查询的 handler **优先暴露/复用服务里已有的业务 Service（或应用层用例）**，做成只读探针，而不是另写一套查库逻辑。已有方法往往已含鉴权边界、组装与脱敏习惯，补查询更快、行为也更一致。
+
+- 例：已有 `OrderService.getById` → 登记 `order_by_id`，handler 内直接调它（再裁剪字段/`limit`）。  
+- 避免：为哨兵单独写裸 SQL / 新 Repository，与线上读路径分叉。  
+- 仍按需少量新增；先覆盖错误上下文里常见的 id（订单号、用户 id 等）。
+
+```ts
+import { registerDataQuery } from '@code-sentry/node';
+// 假设应用内已有：
+// import { orderService } from './services/order.service';
+
+const handle = await registerDataQuery({
+  service: 'order-api', // 可与日志源同名；两套登记互不影响
+  publicBaseUrl: 'https://<本服务对外可达地址>',
+  // listenPort / path 可选；默认挂 /__code_sentry/data/query
+  queries: [
+    {
+      name: 'order_by_id',
+      description: '按订单号查订单摘要',
+      params: ['orderId'],
+      handler: async ({ params, limit }) => {
+        const orderId = String(params.orderId ?? '');
+        // 优先复用已有 Service，勿另写裸 SQL
+        const order = await orderService.getById(orderId);
+        return {
+          rows: order ? [order] : [],
+          truncated: false,
+        };
+      },
+    },
+  ],
+});
+
+// 进程退出时可 await handle.stop()
+```
+
+- 登记/心跳：`{BASE}/api/v1/ingest/data-sources/*`，鉴权同接入 Key。
+- 心跳与 TTL 同日志源（默认约 90s / 5 分钟）。
+- 管理面「数据查询」Tab **只读**，不配 URL / SQL。
+- Agent 经哨兵按名回查；目录非空时未登记的 query 名会被拒绝。
+
 ## 3. 纯 HTTP（无 SDK）
 
 ```bash
@@ -125,12 +171,21 @@ curl -sS -X POST "{BASE}/api/v1/ingest/events" \
 
 应用 callback：`POST {callbackUrl}`，头带同一 `x-webhook-token`，body 含 `from`/`to`/可选过滤与 `limit`；响应 `{ lines, truncated? }`。
 
+数据源登记（可选）：
+
+- `POST {BASE}/api/v1/ingest/data-sources/register` — `{ "service", "callbackUrl", "queries"?, "meta"? }`
+- `POST .../heartbeat` — `{ "service", "callbackUrl"?, "queries"? }`
+- `POST .../unregister` — `{ "service" }`
+
+应用 callback：`POST {callbackUrl}`，头带同一 `x-webhook-token`，body `{ "query", "params"?, "limit"? }`；响应 `{ query?, rows, truncated? }`。
+
 ## 4. 验收
 
 1. `ping` 返回 `ok: true` 且 `projectId` 对得上。  
 2. 故意上报一条 error → 管理面事件可见 → 分析可排队。  
 3. （可选）`registerLogQuery` 后，「日志查询」出现该服务且在线。  
-4. 重新签发 Key 后旧 Key 失效；应用侧换成新 Key 再 `init` / 登记。
+4. （可选）`registerDataQuery` 后，「数据查询」出现该服务、命名列表且在线。  
+5. 重新签发 Key 后旧 Key 失效；应用侧换成新 Key 再 `init` / 登记。
 
 ## 5. 常见失败
 
@@ -138,8 +193,9 @@ curl -sS -X POST "{BASE}/api/v1/ingest/events" \
 | --- | --- |
 | 401/403 | Key 错、未带头、或已轮换 |
 | 上报成功但不分析 | `level` 非 error；或未配仓库 / LLM |
-| 日志源过期 | 无心跳；检查进程与 `publicBaseUrl` 可达性 |
+| 日志/数据源过期 | 无心跳；检查进程与 `publicBaseUrl` 可达性 |
 | Agent 查日志失败 | 源过期、callback 超时/5xx、或时间窗超上限 |
+| Agent 查数据失败 | 源过期、未知 query 名、callback 超时/5xx |
 
 ## 6. 执行约束
 
