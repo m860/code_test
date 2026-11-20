@@ -19,4 +19,10 @@ describe('order-chaos', () => {
   it('throwChaos inventory message', () => {
     expect(() => throwChaos('inventory')).toThrow(/inventory sync failed/);
   });
+
+  it('throwChaos null_deref throws controlled Error (no null NPE)', () => {
+    expect(() => throwChaos('null_deref')).toThrow(
+      /order\.customer missing \(null order\)/,
+    );
+  });
 });

@@ -10,7 +10,10 @@ export const CHAOS_SKUS = {
   CRASH: 'CRASH',
   /** Always ReferenceError-style (5xx) */
   REF: 'REF',
-  /** Always nested null dereference (5xx) */
+  /**
+   * Formerly forced nested null dereference (unhandled TypeError).
+   * create() no longer maps this SKU to chaos; constant kept for callers/docs.
+   */
   NULL: 'NULL',
   /** Force flaky path even if rate is 0 */
   FLAKY: 'FLAKY',
@@ -22,9 +25,9 @@ export type ChaosKind =
   | 'inventory'
   | 'payment_timeout';
 
+/** Random flaky kinds — exclude null_deref so placeOrder flaky path never NPE. */
 const KINDS: ChaosKind[] = [
   'type_error',
-  'null_deref',
   'inventory',
   'payment_timeout',
 ];
@@ -43,8 +46,8 @@ export function throwChaos(kind: ChaosKind): never {
       throw new Error('unreachable');
     }
     case 'null_deref': {
-      const order = null as unknown as { customer: { id: string } };
-      return order.customer.id as never;
+      // Controlled failure instead of real null dereference (avoid unhandled TypeError)
+      throw new Error('demo chaos: order.customer missing (null order)');
     }
     case 'inventory':
       throw new Error('demo chaos: inventory sync failed (warehouse-east)');
