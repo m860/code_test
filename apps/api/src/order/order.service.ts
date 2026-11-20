@@ -84,9 +84,6 @@ export class OrderService {
       Function('return missingWarehouseCode.length')();
       throw new Error('unreachable');
     }
-    if (upper === CHAOS_SKUS.NULL) {
-      throwChaos('null_deref');
-    }
 
     // qty >= 99 always inventory chaos (deterministic for manual test)
     if (dto.qty >= 99) {

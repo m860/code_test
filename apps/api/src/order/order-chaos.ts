@@ -10,7 +10,7 @@ export const CHAOS_SKUS = {
   CRASH: 'CRASH',
   /** Always ReferenceError-style (5xx) */
   REF: 'REF',
-  /** Always nested null dereference (5xx) */
+  /** @deprecated No longer triggers null_deref; kept for demo SKU compatibility */
   NULL: 'NULL',
   /** Force flaky path even if rate is 0 */
   FLAKY: 'FLAKY',
@@ -43,8 +43,7 @@ export function throwChaos(kind: ChaosKind): never {
       throw new Error('unreachable');
     }
     case 'null_deref': {
-      const order = null as unknown as { customer: { id: string } };
-      return order.customer.id as never;
+      throw new Error('demo chaos: order.customer missing (null order)');
     }
     case 'inventory':
       throw new Error('demo chaos: inventory sync failed (warehouse-east)');
