@@ -11,8 +11,8 @@ importers:
   apps/api:
     dependencies:
       '@code-sentry/node':
-        specifier: ^0.5.0
-        version: 0.5.0
+        specifier: ^0.6.0
+        version: 0.6.0
       '@nestjs/common':
         specifier: ^11.0.12
         version: 11.2.8(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -74,6 +74,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@code-sentry/browser':
+        specifier: 0.1.1
+        version: 0.1.1
       '@emotion/react':
         specifier: ^11.14.0
         version: 11.14.0(@types/react@19.3.0)(react@19.3.1)
@@ -357,8 +360,11 @@ packages:
   '@borewit/text-codec@0.2.3':
     resolution: {integrity: sha512-49CycTz1aAZmvFcwkeFyhud1HUmRIB5Tabf7ALV+VA4Iu85MTfz2cUwzPagMFAdVBvrWdkCxG67I30tUwwpKsw==}
 
-  '@code-sentry/node@0.5.0':
-    resolution: {integrity: sha512-QIywsY708V2IkZ13U73kSZE3q4yKEqz7QISQ5uArhXpjsO7NOtHwLY700xcqaiiWjaWrA45UH8gNh+q97k3zCQ==}
+  '@code-sentry/browser@0.1.1':
+    resolution: {integrity: sha512-xefzTpkR4Rlzs2XgD24kcegxm+y6gYdEWe4WQ+IwmYlcJLF4rrkZGihW+BTs3S+Oau2SvekXejIFcjWQKDEReQ==}
+
+  '@code-sentry/node@0.6.0':
+    resolution: {integrity: sha512-I8Vp6WRNrU1EgFc5vWnXHoUAcF0uyy/OdFUbIdDrqyKssgTTTOnE+J1YUMJJPW2i9uPUvOetpvgl9o+U/xiYxQ==}
     engines: {node: '>=20'}
 
   '@colors/colors@1.5.0':
@@ -4013,7 +4019,9 @@ snapshots:
 
   '@borewit/text-codec@0.2.3': {}
 
-  '@code-sentry/node@0.5.0': {}
+  '@code-sentry/browser@0.1.1': {}
+
+  '@code-sentry/node@0.6.0': {}
 
   '@colors/colors@1.5.0':
     optional: true

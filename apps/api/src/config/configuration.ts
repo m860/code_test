@@ -6,6 +6,11 @@ export type AppConfig = {
     environment: string;
     service: string;
     /**
+     * Connectivity heartbeat interval (ms). Default 60000.
+     * Set 0 to disable. Required for Agent log/data query gating in ≥0.6.0.
+     */
+    connectivityHeartbeatIntervalMs: number;
+    /**
      * Base URL Code Sentry can reach for log-query callback (scheme+host+port, no path).
      * Must match CODE_SENTRY_LOG_QUERY_PORT.
      */
@@ -33,6 +38,16 @@ export default (): AppConfig => {
     ? Math.min(1, Math.max(0, parsed))
     : 0.35;
 
+  const heartbeatRaw =
+    process.env.CODE_SENTRY_CONNECTIVITY_HEARTBEAT_MS?.trim();
+  const heartbeatParsed =
+    heartbeatRaw === undefined || heartbeatRaw === ''
+      ? 60_000
+      : Number(heartbeatRaw);
+  const connectivityHeartbeatIntervalMs = Number.isFinite(heartbeatParsed)
+    ? Math.max(0, heartbeatParsed)
+    : 60_000;
+
   const logQueryPort = Number(process.env.CODE_SENTRY_LOG_QUERY_PORT ?? 3110);
   const safeLogPort = Number.isFinite(logQueryPort) ? logQueryPort : 3110;
   const publicBaseUrl =
@@ -52,6 +67,7 @@ export default (): AppConfig => {
       webhookToken: process.env.CODE_SENTRY_WEBHOOK_TOKEN?.trim() ?? '',
       environment: process.env.CODE_SENTRY_ENVIRONMENT?.trim() || 'test',
       service: process.env.CODE_SENTRY_SERVICE?.trim() || 'code-test-api',
+      connectivityHeartbeatIntervalMs,
       publicBaseUrl,
       logQueryPort: safeLogPort,
       dataPublicBaseUrl,

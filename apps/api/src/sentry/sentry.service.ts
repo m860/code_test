@@ -1,6 +1,7 @@
 import {
   captureException,
   captureMessage,
+  getClient,
   init,
   ping,
   registerDataQuery,
@@ -40,11 +41,18 @@ export class SentryService implements OnModuleDestroy {
       this.ready = false;
       return;
     }
+    if (!cs.service?.trim()) {
+      this.logger.warn(
+        'CODE_SENTRY_SERVICE empty; connectivity heartbeat and Agent log/data query will be unavailable',
+      );
+    }
+    // ≥0.6.0: init({ service }) starts connectivity heartbeat automatically
     init({
       baseUrl: cs.baseUrl,
       webhookToken: cs.webhookToken,
       environment: cs.environment,
       service: cs.service,
+      connectivityHeartbeatIntervalMs: cs.connectivityHeartbeatIntervalMs,
     });
     try {
       const result = await ping();
@@ -52,6 +60,15 @@ export class SentryService implements OnModuleDestroy {
       this.logger.log(
         `Code Sentry ping ok → ${cs.baseUrl} project=${result.name}(${result.projectId}) service=${cs.service}`,
       );
+      if (cs.service && cs.connectivityHeartbeatIntervalMs > 0) {
+        this.logger.log(
+          `Code Sentry connectivity heartbeat on (every ${cs.connectivityHeartbeatIntervalMs}ms) service=${cs.service}`,
+        );
+      } else {
+        this.logger.warn(
+          'Code Sentry connectivity heartbeat off (set CODE_SENTRY_SERVICE and interval > 0)',
+        );
+      }
       await this.registerLogQueryFromConfig(cs);
       await this.registerDataQueryFromConfig(cs);
     } catch (err) {
@@ -74,6 +91,7 @@ export class SentryService implements OnModuleDestroy {
       return;
     }
     try {
+      // service must match init.service so「服务能力」shows 日志可用
       this.logQueryHandle = await registerLogQuery({
         service: cs.service,
         publicBaseUrl: cs.publicBaseUrl,
@@ -189,6 +207,7 @@ export class SentryService implements OnModuleDestroy {
   /** Tests only. */
   reset(): void {
     this.ready = false;
+    getClient()?.stopConnectivityHeartbeat();
     resetClient();
   }
 
@@ -201,5 +220,8 @@ export class SentryService implements OnModuleDestroy {
       await this.logQueryHandle.stop();
       this.logQueryHandle = undefined;
     }
+    getClient()?.stopConnectivityHeartbeat();
+    resetClient();
+    this.ready = false;
   }
 }

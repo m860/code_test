@@ -2,11 +2,9 @@
   "version": 2,
   "skills": {
     "code-sentry-integrate": {
-      "source": "172.16.0.199",
-      "sourceUrl": "http://172.16.0.199:8088",
-      "sourceType": "well-known",
-      "computedHash": "3e01269e62d56284996690da820039c5372132d9140e27a9a8823a9e521d6512",
-      "wellKnownDigest": "sha256:28418825dffc5162c94053ec8c50a6acdc9aa92117d7a88043af5ed0e6cfc5b1"
+      "source": "../code_sentry/skills",
+      "sourceType": "local",
+      "computedHash": "df0daf7485866fe58ddc1677849671f06446c34168ea640703b17ab0c91abad3"
     }
   }
 }
